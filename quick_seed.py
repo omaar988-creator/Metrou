@@ -4,53 +4,33 @@ from motor.motor_asyncio import AsyncIOMotorClient
 
 MONGO_URL = os.environ.get('MONGO_URL')
 
-async def seed_academic_content():
+async def reset_and_seed():
     client = AsyncIOMotorClient(MONGO_URL)
     db = client['metrou_db']
+    
+    # مسح شامل للداتا القديمة
+    await db.lessons.delete_many({})
+    await db.vocabulary.delete_many({})
+    await db.quizzes.delete_many({})
 
-    # 📚 استخراج شامل من مذكرة "Le Prince"
-    full_curriculum = [
-        {
-            "id": "GR-001", "level": 1, "order": 1,
-            "title": "الجملة الخبرية (La phrase)",
-            "content": "تتكون من فاعل (Sujet)، فعل (Verbe)، ومفعول (Complément)[cite: 22].",
-            "details": "الفاعل: قد يكون اسماً (Ahmed) أو ضميراً (Je, Tu, Il, Elle, Nous, Vous, Ils, Elles)[cite: 30, 36].",
-            "examples": [{"fr": "Ezz El Din va au lycée", "ar": "عز الدين يذهب إلى المدرسة [cite: 74]"}]
-        },
-        {
-            "id": "GR-002", "level": 1, "order": 2,
-            "title": "تصنيف الأفعال (Les Verbes)",
-            "content": "تنقسم الأفعال إلى 3 مجموعات حسب نهايتها[cite: 84].",
-            "details": "المجموعة 1 تنتهي بـ er (parler)، المجموعة 2 تنتهي بـ ir (finir)، المجموعة 3 شاذة تنتهي بـ ir/re/oir (être, avoir)[cite: 85].",
-            "examples": [{"fr": "parler / finir / être", "ar": "يتحدث / ينهي / يكون [cite: 85]"}]
-        },
-        {
-            "id": "GR-003", "level": 1, "order": 3,
-            "title": "فعل الكينونة (Être) - شاذ",
-            "content": "أهم فعل شاذ في المجموعة الثالثة[cite: 85, 932].",
-            "details": "Je suis, Tu es, Il/Elle est, Nous sommes, Vous êtes, Ils/Elles sont[cite: 932].",
-            "examples": [{"fr": "Je suis étudiant", "ar": "أنا طالب [cite: 53]"}]
-        },
-        {
-            "id": "GR-004", "level": 1, "order": 4,
-            "title": "فعل الملكية (Avoir) - شاذ",
-            "content": "يستخدم للتعبير عن الملكية والعمر[cite: 85, 933].",
-            "details": "J'ai, Tu as, Il/Elle a, Nous avons, Vous avez, Ils/Elles ont[cite: 933].",
-            "examples": [{"fr": "Il a 15 ans", "ar": "هو عنده 15 سنة [cite: 225]"}]
-        },
-        {
-            "id": "GR-005", "level": 1, "order": 5,
-            "title": "أدوات المعرفة (L'article défini)",
-            "content": "تحدد نوع الاسم (مذكر/مؤنث) وعدده (مفرد/جمع)[cite: 100, 105].",
-            "details": "Le (مذكر مفرد)، La (مؤنث مفرد)، L' (أمام حرف متحرك)، Les (للجمع بنوعيه)[cite: 110].",
-            "examples": [{"fr": "Le livre / La table", "ar": "الكتاب / الطاولة [cite: 110]"}]
-        }
+    # 🏛️ 1. المنهج الأكاديمي (Le Prince)
+    academic = [
+        {"id": "GR-001", "level": 1, "order": 1, "title": "الجملة الخبرية", "content": "تتكون من فاعل، فعل، ومفعول [cite: 18, 22].", "details": "الفاعل قد يكون اسماً أو ضميراً (Je, Tu, Il) [cite: 27, 33].", "examples": [{"fr": "Ali va au lycée", "ar": "علي يذهب للمدرسة[cite: 74]."}]},
+        {"id": "GR-002", "level": 1, "order": 2, "title": "أدوات المعرفة", "content": "Le, La, L', Les [cite: 109, 111].", "details": "تستخدم لتعريف الاسم وتحديد نوعه [cite: 110].", "examples": [{"fr": "Le livre", "ar": "الكتاب[cite: 110]."}]}
     ]
 
-    print("⏳ جاري تنظيف القاعدة وحقن المنهج الأكاديمي الشامل...")
-    await db.lessons.delete_many({}) 
-    await db.lessons.insert_many(full_curriculum)
-    print(f"✅ تم بنجاح حقن {len(full_curriculum)} درساً أساسياً من المذكرة.")
+    # 📜 2. الخطوط الثقافية والشارع
+    cultural = [
+        {"category": "history", "title": "الثورة الفرنسية", "content": "حدثت عام 1789 وغيرت وجه العالم شعارها (Liberté, Égalité, Fraternité).", "type": "official"},
+        {"category": "politics", "author": "Charles de Gaulle", "quote": "Paris libéré!", "ar": "باريس حُررت!", "type": "official"},
+        {"category": "women_rights", "figure": "Simone de Beauvoir", "content": "رائدة نضال المرأة الفرنسية وحقوقها السياسية[cite: 22].", "type": "official"},
+        {"category": "street_line", "fr": "Cimer", "standard": "Merci", "ar": "شكراً (بلغة الشارع)", "type": "slang"},
+        {"category": "proverbs", "fr": "C'est la vie", "ar": "هذه هي الحياة", "type": "common"}
+    ]
+
+    await db.lessons.insert_many(academic)
+    await db.vocabulary.insert_many(cultural)
+    print("✅ تم مسح الداتا القديمة وضخ 5 خطوط مترو جديدة بنجاح!")
 
 if __name__ == "__main__":
-    asyncio.run(seed_academic_content())
+    asyncio.run(reset_and_seed())
