@@ -66,3 +66,22 @@ app.include_router(api_router)
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+# نموذج طلب التفتيش
+class InspectionRequest(BaseModel):
+    past_topics: List[str]
+
+@api_router.post("/ai/inspect")
+async def ai_inspect(data: InspectionRequest):
+    try:
+        topics = ", ".join(data.past_topics)
+        prompt = f"""
+        أنت الآن 'مفتش مترو اللغة الفرنسية'. 
+        قم باختيار سؤال واحد عشوائي من المواضيع التالية: {topics}.
+        يجب أن يكون السؤال قصيراً (اختيار من متعدد).
+        إذا أخطأ المستخدم، اقترح عليه عقاباً طريفاً (مثلاً: تنظيف زجاج المترو، أو الغناء بالفرنسية في المحطة).
+        تحدث بلهجة المفتش الحازم ولكن الفكاهي.
+        """
+        response = ai_model.generate_content(prompt)
+        return {"inspection_query": response.text}
+    except Exception as e:
+        return {"inspection_query": "المفتش مشغول الآن، يمكنك المرور!"}
