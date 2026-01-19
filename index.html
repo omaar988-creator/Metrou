@@ -25,6 +25,45 @@
     <p>اضغط على المحطة لتبدأ درس اللغة الفرنسية</p>
 
     <div class="station-container" id="metro-map">
+
+    <div id="inspector-section" class="lesson-card" style="border: 2px dashed #f44336; display: none;">
+    <div style="font-size: 50px;">👮‍♂️</div>
+    <h3 style="color: #f44336;">تفتيش مفاجئ! (Contrôle)</h3>
+    <p id="inspection-question">أظهر تذكرتك اللغوية.. أجب على السؤال التالي:</p>
+    <div id="inspection-content" style="background: #2a2a2a; padding: 15px; border-radius: 10px; margin-bottom: 10px;"></div>
+    <button class="btn-explain" style="background: #f44336;" onclick="closeInspection()">تمت الإجابة (أو قبول العقاب 😅)</button>
+</div>
+
+<script>
+    // وظيفة تشغيل التفتيش عشوائياً
+    async function startInspection() {
+        const inspectorDiv = document.getElementById('inspector-section');
+        const contentDiv = document.getElementById('inspection-content');
+        
+        inspectorDiv.style.display = 'block';
+        contentDiv.innerText = "جاري استدعاء المفتش... 🏃‍♂️";
+
+        try {
+            const res = await fetch(`${API_URL}/api/ai/inspect`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ past_topics: ["التحيات", "الأرقام", "أدوات التعريف"] })
+            });
+            const data = await res.json();
+            contentDiv.innerText = data.inspection_query;
+        } catch (e) {
+            contentDiv.innerText = "هناك زحام في المحطة، المفتش لن يأتي الآن!";
+        }
+    }
+
+    function closeInspection() {
+        document.getElementById('inspector-section').style.display = 'none';
+    }
+
+    // جعل التفتيش يظهر فجأة كل فترة
+    setTimeout(startInspection, 15000); // سيظهر التفتيش بعد 15 ثانية من فتح الصفحة كمثال
+</script>
+
         </div>
 
     <div class="lesson-card">
