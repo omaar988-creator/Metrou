@@ -165,3 +165,45 @@
 
 </body>
 </html>
+<div class="lesson-card" style="border-bottom: 2px solid #4CAF50; margin-bottom: 30px;">
+    <h3>👤 الملف الشخصي</h3>
+    <input type="text" id="username-input" placeholder="اكتب اسمك هنا..." 
+           style="padding: 10px; border-radius: 5px; border: none; width: 60%;">
+    <button onclick="changeName()" 
+            style="padding: 10px; background: #2196F3; color: white; border: none; border-radius: 5px; cursor: pointer;">
+        حفظ الاسم
+    </button>
+    <p id="welcome-msg" style="color: #4CAF50; font-weight: bold; margin-top: 10px;"></p>
+</div>
+
+<script>
+    // وظيفة تغيير الاسم والاتصال بالسيرفر
+    async function changeName() {
+        const name = document.getElementById('username-input').value;
+        if (!name) return alert("يرجى كتابة اسم أولاً");
+
+        try {
+            const res = await fetch(`${API_URL}/api/user/update-name`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: name })
+            });
+            const data = await res.json();
+            document.getElementById('welcome-msg').innerText = data.message;
+            // حفظ الاسم في المتصفح ليبقى موجوداً عند تحديث الصفحة
+            localStorage.setItem('user_name', name);
+        } catch (e) {
+            alert("خطأ في الاتصال بالسيرفر");
+        }
+    }
+
+    // استعادة الاسم المحفوظ عند فتح التطبيق
+    window.onload = () => {
+        const savedName = localStorage.getItem('user_name');
+        if (savedName) {
+            document.getElementById('welcome-msg').innerText = `أهلاً بك مجدداً، ${savedName} 🚇`;
+        }
+        loadMap(); // تشغيل الخريطة
+    };
+</script>
+
