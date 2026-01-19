@@ -2,57 +2,55 @@ import asyncio
 import os
 from motor.motor_asyncio import AsyncIOMotorClient
 
-# تأكد من أن MONGO_URL مضاف في إعدادات Render
 MONGO_URL = os.environ.get('MONGO_URL')
 
 async def seed_academic_content():
     client = AsyncIOMotorClient(MONGO_URL)
     db = client['metrou_db']
 
-    # --- 1. عينة من دروس القواعد الاحترافية (Grammar) ---
-    grammar_lessons = [
+    # 📚 استخراج شامل من مذكرة "Le Prince"
+    full_curriculum = [
         {
-            "id": "GR-001",
-            "level": "A1",
-            "title": "أدوات التعريف (Les Articles Définis)",
-            "content": "تُستخدم أدوات التعريف لتحديد اسم معين معروف لدى المتحدث والمستمع.",
-            "rule": "Le (للمذكر)، La (للمؤنث)، L' (للمفرد المبدوء بحرف علة)، Les (للجمع).",
-            "examples": [
-                {"fr": "Le livre est sur la table", "ar": "الكتاب على الطاولة"},
-                {"fr": "L'école هي المدرسة", "ar": "المدرسة"}
-            ],
-            "order": 1
+            "id": "GR-001", "level": 1, "order": 1,
+            "title": "الجملة الخبرية (La phrase)",
+            "content": "تتكون من فاعل (Sujet)، فعل (Verbe)، ومفعول (Complément)[cite: 22].",
+            "details": "الفاعل: قد يكون اسماً (Ahmed) أو ضميراً (Je, Tu, Il, Elle, Nous, Vous, Ils, Elles)[cite: 30, 36].",
+            "examples": [{"fr": "Ezz El Din va au lycée", "ar": "عز الدين يذهب إلى المدرسة [cite: 74]"}]
         },
         {
-            "id": "GR-002",
-            "level": "A1",
-            "title": "فعل الكينونة (Verbe Être) في المضارع",
-            "content": "يعتبر أهم فعل في اللغة الفرنسية، ويستخدم للتعريف عن النفس، المهنة، أو الحالة.",
-            "rule": "Je suis, Tu es, Il/Elle est, Nous sommes, Vous êtes, Ils/Elles sont.",
-            "examples": [
-                {"fr": "Je suis étudiant", "ar": "أنا طالب"},
-                {"fr": "Nous sommes heureux", "ar": "نحن سعداء"}
-            ],
-            "order": 2
+            "id": "GR-002", "level": 1, "order": 2,
+            "title": "تصنيف الأفعال (Les Verbes)",
+            "content": "تنقسم الأفعال إلى 3 مجموعات حسب نهايتها[cite: 84].",
+            "details": "المجموعة 1 تنتهي بـ er (parler)، المجموعة 2 تنتهي بـ ir (finir)، المجموعة 3 شاذة تنتهي بـ ir/re/oir (être, avoir)[cite: 85].",
+            "examples": [{"fr": "parler / finir / être", "ar": "يتحدث / ينهي / يكون [cite: 85]"}]
+        },
+        {
+            "id": "GR-003", "level": 1, "order": 3,
+            "title": "فعل الكينونة (Être) - شاذ",
+            "content": "أهم فعل شاذ في المجموعة الثالثة[cite: 85, 932].",
+            "details": "Je suis, Tu es, Il/Elle est, Nous sommes, Vous êtes, Ils/Elles sont[cite: 932].",
+            "examples": [{"fr": "Je suis étudiant", "ar": "أنا طالب [cite: 53]"}]
+        },
+        {
+            "id": "GR-004", "level": 1, "order": 4,
+            "title": "فعل الملكية (Avoir) - شاذ",
+            "content": "يستخدم للتعبير عن الملكية والعمر[cite: 85, 933].",
+            "details": "J'ai, Tu as, Il/Elle a, Nous avons, Vous avez, Ils/Elles ont[cite: 933].",
+            "examples": [{"fr": "Il a 15 ans", "ar": "هو عنده 15 سنة [cite: 225]"}]
+        },
+        {
+            "id": "GR-005", "level": 1, "order": 5,
+            "title": "أدوات المعرفة (L'article défini)",
+            "content": "تحدد نوع الاسم (مذكر/مؤنث) وعدده (مفرد/جمع)[cite: 100, 105].",
+            "details": "Le (مذكر مفرد)، La (مؤنث مفرد)، L' (أمام حرف متحرك)، Les (للجمع بنوعيه)[cite: 110].",
+            "examples": [{"fr": "Le livre / La table", "ar": "الكتاب / الطاولة [cite: 110]"}]
         }
     ]
 
-    # --- 2. عينة من بنك الجمل (Sentence Bank) ---
-    sentences_bank = [
-        {"fr": "Comment puis-je vous aider ?", "ar": "كيف يمكنني مساعدتك؟", "category": "General"},
-        {"fr": "C'est un plaisir de vous rencontrer", "ar": "إنه لمن دواعي سروري لقاؤك", "category": "Social"},
-        {"fr": "Pouvez-vous répéter سيل فوبليه ؟", "ar": "هل يمكنك التكرار من فضلك؟", "category": "Learning"}
-    ]
-
-    # التنفيذ: مسح القديم وحقن الجديد
-    print("⏳ جاري تنظيف وحقن المحتوى الأكاديمي...")
-    await db.lessons.delete_many({}) # نمسح العينات القديمة البسيطة
-    await db.lessons.insert_many(grammar_lessons)
-    
-    if await db.vocabulary.count_documents({}) == 0:
-        await db.vocabulary.insert_many(sentences_bank)
-        
-    print(f"✅ تم حقن {len(grammar_lessons)} دروس قواعد و {len(sentences_bank)} جمل.")
+    print("⏳ جاري تنظيف القاعدة وحقن المنهج الأكاديمي الشامل...")
+    await db.lessons.delete_many({}) 
+    await db.lessons.insert_many(full_curriculum)
+    print(f"✅ تم بنجاح حقن {len(full_curriculum)} درساً أساسياً من المذكرة.")
 
 if __name__ == "__main__":
     asyncio.run(seed_academic_content())
