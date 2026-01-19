@@ -1,39 +1,65 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, Request, Response
-from fastapi.responses import JSONResponse
-from dotenv import load_dotenv
+from fastapi import FastAPI, APIRouter, HTTPException, Request
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
-import logging
-from pathlib import Path
-from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any
-import uuid
-from datetime import datetime, timezone, timedelta
-import httpx
+import google.generativeai as genai
+from pydantic import BaseModel
+from typing import List, Optional, Dict
+from datetime import datetime
 
-# 1. إعداد البيئة
-ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
-
+# 1. إعداد البيئة والذكاء الاصطناعي
 MONGO_URL = os.environ.get('MONGO_URL')
-DB_NAME = os.environ.get('DB_NAME', 'metrou_db')
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
 
-if not MONGO_URL:
-    print("Warning: MONGO_URL not found")
+genai.configure(api_key=GEMINI_API_KEY)
+ai_model = genai.GenerativeModel('gemini-pro')
 
 client = AsyncIOMotorClient(MONGO_URL)
-db = client[DB_NAME]
+db = client['metrou_db']
 
 app = FastAPI()
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+api_router = APIRouter(prefix="/api")
+
+# ============== MODELS ==============
+class AIExplainRequest(BaseModel):
+    topic: str
+    user_language: str = "ar"
+
+class UserUpdate(BaseModel):
+    name: str
+
+# ============== API ENDPOINTS ==============
+
+# 1. نظام محطات المترو (تطوير المحطة)
+@api_router.get("/metro/map")
+async def get_metro_map():
+    # تم تحديث المحطات لتناسب تعلم الفرنسية
+    stations = [
+        {"id": 1, "name_ar": "بداية الرحلة", "name_fr": "Le Départ", "topic": "Les Salutations", "status": "open"},
+        {"id": 2, "name_ar": "محطة الأفعال", "name_fr": "Les Verbes", "topic": "Être et Avoir", "status": "locked"},
+        {"id": 3, "name_ar": "محطة القواعد", "name_fr": "La Grammaire", "topic": "Le Genre", "status": "locked"}
+    ]
+    return stations
+
+# 2. ربط Gemini لشرح القواعد الفرنسية
+@api_router.post("/ai/explain")
+async def ai_explain(data: AIExplainRequest):
+    try:
+        prompt = f"أنت معلم لغة فرنسية خبير. اشرح موضوع '{data.topic}' باللغة العربية بأسلوب مبسط مع أمثلة فرنسية مترجمة."
+        response = ai_model.generate_content(prompt)
+        return {"explanation": response.text}
+    except Exception as e:
+        return {"explanation": "حدث خطأ في الاتصال بـ Gemini، يرجى التأكد من مفتاح API."}
+
+# 3. تغيير اسم المستخدم (Profile)
+@api_router.post("/user/update-name")
+async def update_name(data: UserUpdate):
+    # هنا يتم التعديل في MongoDB لاحقاً
+    return {"message": f"تم تغيير اسمك إلى: {data.name}"}
+
+app.include_router(api_router)
 
 api_router = APIRouter(prefix="/api")
 
