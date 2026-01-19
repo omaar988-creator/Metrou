@@ -3,37 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مترو - Metrou</title>
+    <title>Metrou: رحلة تعلم الفرنسية 🚇</title>
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #121212;
-            color: #ffffff;
-            margin: 0;
-            padding: 20px;
-            text-align: center;
+        body { background: #121212; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; padding: 20px; }
+        .station-container { display: flex; justify-content: center; gap: 20px; margin: 30px 0; flex-wrap: wrap; }
+        .station-node { 
+            background: #1e1e1e; border: 3px solid #4CAF50; border-radius: 50%; 
+            width: 80px; height: 80px; display: flex; flex-direction: column; 
+            align-items: center; justify-content: center; cursor: pointer; transition: 0.3s;
         }
-        .container {
-            max-width: 400px;
-            margin: 0 auto;
+        .station-node.locked { border-color: #555; opacity: 0.6; cursor: not-allowed; }
+        .station-node:hover:not(.locked) { transform: scale(1.1); background: #2e7d32; }
+        .lesson-card { background: #1e1e1e; padding: 20px; border-radius: 15px; max-width: 600px; margin: 20px auto; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
+        .btn-explain { background: #4CAF50; color: white; border: none; padding: 12px 25px; border-radius: 25px; cursor: pointer; font-size: 18px; font-weight: bold; }
+        #explanation-text { text-align: right; line-height: 1.6; color: #ddd; margin-top: 20px; white-space: pre-line; }
+    </style>
+</head>
+<body>
+
+    <h1>تطبيق Metrou 🚇</h1>
+    <p>اضغط على المحطة لتبدأ درس اللغة الفرنسية</p>
+
+    <div class="station-container" id="metro-map">
+        </div>
+
+    <div class="lesson-card">
+        <h3 id="current-lesson">المحطة الحالية: الترحيب بالفرنسية</h3>
+        <button class="btn-explain" onclick="askGemini()">طلب شرح من Gemini ✨</button>
+        <div id="explanation-text">اضغط على الزر ليقوم الذكاء الاصطناعي بشرح القاعدة لك...</div>
+    </div>
+
+    <script>
+        const API_URL = "https://metrou-db.onrender.com";
+
+        // تحميل خريطة المحطات من كود البايثون
+        async function loadMap() {
+            try {
+                const res = await fetch(`${API_URL}/api/metro/map`);
+                const stations = await res.json();
+                const mapDiv = document.getElementById('metro-map');
+                mapDiv.innerHTML = stations.map(s => `
+                    <div class="station-node ${s.status === 'locked' ? 'locked' : ''}" onclick="selectStation('${s.name_ar}', '${s.name_fr}')">
+                        <span style="font-size: 20px;">${s.status === 'locked' ? '🔒' : '🚇'}</span>
+                        <small style="font-size: 10px;">${s.name_ar}</small>
+                    </div>
+                `).join('');
+            } catch (e) { console.error("خطأ في جلب الخريطة"); }
         }
-        .card {
-            background-color: #1e1e1e;
-            border-radius: 15px;
-            padding: 20px;
-            margin-top: 20px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+
+        let currentTopic = "التحيات في اللغة الفرنسية";
+
+        function selectStation(nameAr, nameFr) {
+            document.getElementById('current-lesson').innerText = `المحطة الحالية: ${nameAr} (${nameFr})`;
+            currentTopic = `${nameAr} في الفرنسية`;
+            document.getElementById('explanation-text').innerText = "جاهز للشرح...";
         }
-        h1 { color: #4CAF50; }
-        button {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            padding: 15px 32px;
-            text-align: center;
-            text-decoration: none;
-            display: inline-block;
-            font-size: 16px;
+
+        // إرسال الطلب لـ Gemini (الذي ربطناه في ملف server.py)
+        async function askGemini() {
+            const textDiv = document.getElementById('explanation-text');
+            textDiv.innerText = "جاري استشارة المعلم الذكي (Gemini)... 🧠";
+            
+            try {
+                const res = await fetch(`${API_URL}/api/ai/explain`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ topic: currentTopic })
+                });
+                const data = await res.json();
+                textDiv.innerText = data.explanation;
+            } catch (err) {
+                textDiv.innerText = "تعذر الاتصال بالذكاء الاصطناعي. تأكد من إعداد مفتاح Gemini في Render.";
+            }
+        }
+
+        loadMap();
+    </script>
+</body>
+</html>
             border-radius: 25px;
             margin-top: 20px;
             width: 100%;
