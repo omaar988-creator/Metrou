@@ -85,3 +85,17 @@ async def ai_inspect(data: InspectionRequest):
         return {"inspection_query": response.text}
     except Exception as e:
         return {"inspection_query": "المفتش مشغول الآن، يمكنك المرور!"}
+# في ملف server.py
+
+@api_router.post("/api/metro/request-passage")
+async def request_passage(data: Dict[str, str]):
+    current_station = data.get("from_station", "التحيات")
+    
+    # اطلب من جيميناي توليد سؤال تفتيش سريع (مراجعة)
+    prompt = f"أنت مفتش مترو اللغة الفرنسية. المستخدم يريد الانتقال من محطة {current_station}. اطرح عليه سؤالاً واحداً (اختيارات) مراجعة لما تعلمه، وإذا فشل، قل له عقاباً فكاهياً."
+    
+    try:
+        response = ai_model.generate_content(prompt)
+        return {"inspection_question": response.text}
+    except:
+        return {"inspection_question": "أين تذكرتك؟ قل 'Bonjour' لتمر!"}
