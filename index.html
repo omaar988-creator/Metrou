@@ -3,217 +3,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Metrou App 🚇</title>
+    <title>Metrou - الموسوعة اللغوية 🚇</title>
     <style>
-        :root { --main-bg: #131f24; --accent: #58cc02; --wrong: #ff4b4b; }
-        body { background: var(--main-bg); color: white; font-family: sans-serif; text-align: center; margin: 0; padding-bottom: 50px; }
-        .header { padding: 20px; background: #202f36; font-size: 1.5rem; font-weight: bold; border-bottom: 2px solid var(--accent); }
-        .stats { display: flex; justify-content: space-around; padding: 15px; background: #131f24; position: sticky; top: 0; z-index: 100; }
-        .track { display: flex; flex-direction: column; align-items: center; gap: 40px; padding: 40px 0; }
-        .node { width: 70px; height: 70px; background: white; border-radius: 50%; border: 5px solid var(--accent); display: flex; align-items: center; justify-content: center; color: black; font-weight: bold; font-size: 1.2rem; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 15px rgba(88, 204, 2, 0.4); }
-        .node.locked { border-color: #3b4c54; background: #202f36; color: #3b4c54; box-shadow: none; }
-        
-        /* شاشة المفتش والدروس */
-        #modal-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
-        .btn { background: var(--accent); color: white; border: none; padding: 15px 40px; border-radius: 30px; font-size: 1.1rem; margin-top: 20px; width: 80%; cursor: pointer; }
-        .punishment { color: var(--wrong); margin-top: 15px; font-weight: bold; }
-        .lesson-box { background: #202f36; padding: 20px; border-radius: 15px; border: 1px solid var(--accent); width: 85%; }
+        :root { --blue: #3498db; --red: #e74c3c; --green: #2ecc71; --orange: #f39c12; --bg: #131f24; }
+        body { background: var(--bg); color: white; font-family: sans-serif; margin: 0; }
+        .hub { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 20px; }
+        .line-card { background: #1a2a33; padding: 20px; border-radius: 15px; cursor: pointer; border-right: 8px solid white; transition: 0.3s; }
+        .line-card:active { transform: scale(0.95); }
+        #display-area { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); display: none; flex-direction: column; padding: 20px; box-sizing: border-box; z-index: 1000; }
+        .btn { background: var(--blue); color: white; border: none; padding: 15px; border-radius: 10px; margin-top: 10px; width: 100%; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <div class="header">مترو: رحلة اللغة 🚇</div>
-    
-    <div class="stats">
-        <div style="color: #ffc800;">⭐ <span id="pts">0</span></div>
-        <div style="color: var(--wrong);">⚡ <span id="nrg">5</span></div>
+    <div style="padding: 20px; text-align: center; border-bottom: 2px solid #333;">
+        <h1>خريطة خطوط المترو 🚇</h1>
     </div>
 
-    <div class="track" id="nodes-container">
-        <div class="node" onclick="openLesson('الترحيب')">1</div>
-        <div class="node locked" onclick="triggerInspector('الأفعال')">2</div>
-        <div class="node locked" onclick="triggerInspector('الأرقام')">3</div>
+    <div class="hub">
+        <div class="line-card" onclick="loadPath('lessons')" style="border-color: var(--blue);">🏛️ المنهج الأكاديمي</div>
+        <div class="line-card" onclick="loadPath('history')" style="border-color: var(--red);">📜 تاريخ فرنسا</div>
+        <div class="line-card" onclick="loadPath('politics')" style="border-color: var(--green);">⚖️ مشاهير السياسة</div>
+        <div class="line-card" onclick="loadPath('street_line')" style="border-color: var(--orange);">⚡ لغة الشارع</div>
     </div>
 
-    <div id="modal-screen">
-        <div id="content-area" class="lesson-box">
-            <h2 id="modal-title">جاري التحميل...</h2>
-            <p id="modal-body"></p>
-            <div id="inspector-controls" style="display:none;">
-                <button class="btn" onclick="resolve(true)">أعرف الإجابة ✅</button>
-                <button class="btn" style="background: #3b4c54;" onclick="resolve(false)">لا أعرف (عقاب)</button>
-            </div>
-            <button class="btn" id="close-btn" onclick="closeModal()">إغلاق</button>
+    <div id="display-area">
+        <h2 id="title"></h2>
+        <p id="text-content" style="font-size: 1.2rem; line-height: 1.6;"></p>
+        <div style="margin-top: auto;">
+            <button class="btn" onclick="speakText()">🔊 استماع للنطق</button>
+            <button class="btn" style="background:var(--orange)" onclick="startMic()">🎤 قراءة بالمايك</button>
+            <button class="btn" style="background:#555" onclick="closeDisplay()">العودة للخريطة</button>
         </div>
-        <p id="punish-msg" class="punishment"></p>
     </div>
 
     <script>
         const API_URL = "https://metrou-db.onrender.com";
-        let energy = 5;
-        let points = 0;
 
-        async function openLesson(lessonName) {
-            showModal("جاري فتح الدرس...", "انتظر قليلاً...");
-            try {
-                const res = await fetch(`${API_URL}/api/lessons`);
-                const lessons = await res.json();
-                const lesson = lessons.find(l => l.title === lessonName || l.title_ar === lessonName);
-                
-                if (lesson) {
-                    showModal(`📖 ${lesson.title}`, lesson.content);
-                } else {
-                    showModal("تنبيه", "المفتش: لم يضع السيرفر محتوى لهذا الدرس بعد!");
-                }
-            } catch (e) {
-                showModal("خطأ", "تعذر الاتصال بالعقل. تأكد أن السيرفر يعمل.");
-            }
+        async function loadPath(type) {
+            const url = type === 'lessons' ? `${API_URL}/api/lessons` : `${API_URL}/api/encyclopedia?category=${type}`;
+            const res = await fetch(url);
+            const data = await res.json();
+            const item = data[0]; // عرض أول محطة كمثال
+
+            document.getElementById('title').innerText = item.title || item.fr || "محطة المترو";
+            document.getElementById('text-content').innerText = item.content || item.ar || "";
+            document.getElementById('display-area').style.display = 'flex';
         }
 
-        async function triggerInspector(topic) {
-            if (energy <= 0) return alert("نفدت طاقتك!");
-            showModal("👮‍♂️ تفتيش مفاجئ!", "جاري تحضير السؤال...", true);
-            
-            try {
-                const res = await fetch(`${API_URL}/api/ai/inspect`, {
-                    method: "POST",
-                    headers: {"Content-Type": "application/json"},
-                    body: JSON.stringify({ topic: topic })
-                });
-                const data = await res.json();
-                document.getElementById('modal-body').innerText = data.question;
-            } catch (e) {
-                document.getElementById('modal-body').innerText = "المفتش: ترجم كلمة 'Bonjour' فوراً للمرور!";
-            }
+        function speakText() {
+            const text = document.getElementById('title').innerText;
+            const msg = new SpeechSynthesisUtterance(text);
+            msg.lang = 'fr-FR';
+            window.speechSynthesis.speak(msg);
         }
 
-        function showModal(title, body, isInspector = false) {
-            document.getElementById('modal-title').innerText = title;
-            document.getElementById('modal-body').innerText = body;
-            document.getElementById('modal-screen').style.display = 'flex';
-            document.getElementById('inspector-controls').style.display = isInspector ? 'block' : 'none';
-            document.getElementById('close-btn').style.display = isInspector ? 'none' : 'block';
+        function startMic() {
+            const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.lang = 'fr-FR';
+            recognition.start();
+            recognition.onresult = (e) => alert("تم التقاط صوتك: " + e.results[0][0].transcript);
         }
 
-        function closeModal() {
-            document.getElementById('modal-screen').style.display = 'none';
-            document.getElementById('punish-msg').innerText = "";
-        }
-
-        function resolve(success) {
-            const punishMsg = document.getElementById('punish-msg');
-            if (success) {
-                points += 15;
-                document.getElementById('pts').innerText = points;
-                punishMsg.style.color = "#58cc02";
-                punishMsg.innerText = "أحسنت! المفتش سمح لك بالمرور. 🎫";
-            } else {
-                energy--;
-                document.getElementById('nrg').innerText = energy;
-                punishMsg.innerText = "عقابك: قف على رجل واحدة لمدة دقيقة! 🦵";
-            }
-            setTimeout(closeModal, 3000);
-        }
-    </script>
-</body>
-</html>
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Metrou App - الأكاديمية 🚇</title>
-    <style>
-        :root { --main-bg: #131f24; --accent: #58cc02; --wrong: #ff4b4b; --card: #202f36; }
-        body { background: var(--main-bg); color: white; font-family: sans-serif; text-align: center; margin: 0; padding-bottom: 50px; }
-        .header { padding: 20px; background: var(--card); font-size: 1.5rem; font-weight: bold; border-bottom: 3px solid var(--accent); }
-        .track { display: flex; flex-direction: column; align-items: center; gap: 40px; padding: 40px 0; }
-        .node { width: 75px; height: 75px; background: white; border-radius: 50%; border: 5px solid var(--accent); display: flex; align-items: center; justify-content: center; color: black; font-weight: bold; font-size: 1.3rem; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 15px rgba(88, 204, 2, 0.4); }
-        
-        /* نافذة الدرس والاختبار */
-        #modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.98); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; padding: 20px; box-sizing: border-box; }
-        .box { background: var(--card); padding: 25px; border-radius: 20px; border: 2px solid var(--accent); width: 90%; max-width: 400px; text-align: right; }
-        .example { background: rgba(255,255,255,0.05); padding: 10px; border-radius: 10px; margin: 10px 0; border-right: 4px solid var(--accent); }
-        
-        .btn { background: var(--accent); color: white; border: none; padding: 15px; border-radius: 12px; font-size: 1.1rem; width: 100%; cursor: pointer; margin-top: 15px; font-weight: bold; }
-        .option-btn { background: #3b4c54; margin-bottom: 10px; text-align: right; font-size: 1rem; }
-        .wrong { background: var(--wrong) !important; }
-    </style>
-</head>
-<body>
-
-    <div class="header">مترو: المنهج الأكاديمي 📚</div>
-    
-    <div class="track">
-        <div class="node" onclick="loadLesson('GR-001')">1</div>
-        <div class="node" onclick="loadLesson('GR-002')">2</div>
-        <div class="node" onclick="loadLesson('GR-003')">3</div>
-    </div>
-
-    <div id="modal">
-        <div class="box" id="modal-content">
-            </div>
-    </div>
-
-    <script>
-        const API_URL = "https://metrou-db.onrender.com";
-        let currentLessonData = null;
-
-        async function loadLesson(lessonId) {
-            document.getElementById('modal').style.display = 'flex';
-            document.getElementById('modal-content').innerHTML = "<h2>جاري تحميل الدرس...</h2>";
-            
-            try {
-                const res = await fetch(`${API_URL}/api/lessons`);
-                const lessons = await res.json();
-                currentLessonData = lessons.find(l => l.id === lessonId);
-                
-                if (currentLessonData) {
-                    showLessonUI();
-                }
-            } catch (e) {
-                alert("تعذر الاتصال بالسيرفر");
-            }
-        }
-
-        function showLessonUI() {
-            let examplesHtml = currentLessonData.examples.map(ex => 
-                `<div class="example"><b>FR:</b> ${ex.fr}<br><b>AR:</b> ${ex.ar}</div>`
-            ).join('');
-
-            document.getElementById('modal-content').innerHTML = `
-                <h2 style="color:var(--accent)">${currentLessonData.title}</h2>
-                <p>${currentLessonData.content}</p>
-                <div style="font-size:0.9rem; color:#ccc;">${currentLessonData.details}</div>
-                ${examplesHtml}
-                <button class="btn" onclick="startQuiz()">ابدأ الاختبار التفاعلي ✍️</button>
-                <button class="btn" style="background:#555" onclick="closeModal()">إغلاق</button>
-            `;
-        }
-
-        function startQuiz() {
-            // ملاحظة: هنا سنقوم بجلب سؤال عشوائي مرتبط بهذا الدرس من قاعدة البيانات
-            document.getElementById('modal-content').innerHTML = `
-                <h2 style="color:var(--accent)">اختبر فهمك!</h2>
-                <p id="q-text">سؤال مستخرج من المذكرة: ما هي أداة النكرة للمذكر؟</p>
-                <button class="btn option-btn" onclick="checkAnswer(this, true)">1- Un</button>
-                <button class="btn option-btn" onclick="checkAnswer(this, false)">2- Une</button>
-                <button class="btn option-btn" onclick="checkAnswer(this, false)">3- Des</button>
-            `;
-        }
-
-        function checkAnswer(btn, isCorrect) {
-            if(isCorrect) {
-                btn.style.background = "#58cc02";
-                alert("إجابة صحيحة! أحسنت يا بطل. 🎉");
-                closeModal();
-            } else {
-                btn.classList.add('wrong');
-                alert("للأسف إجابة خاطئة، راجع الدرس مرة أخرى. ❌");
-            }
-        }
-
-        function closeModal() { document.getElementById('modal').style.display = 'none'; }
+        function closeDisplay() { document.getElementById('display-area').style.display = 'none'; }
     </script>
 </body>
 </html>
