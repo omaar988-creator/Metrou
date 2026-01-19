@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مترو - Metrou</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #121212;
+            color: #ffffff;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        .card {
+            background-color: #1e1e1e;
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        h1 { color: #4CAF50; }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            border-radius: 25px;
+            margin-top: 20px;
+            width: 100%;
+            cursor: pointer;
+        }
+        .status {
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #888;
+        }
+        .badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .online { background-color: #2e7d32; color: white; }
+        .offline { background-color: #c62828; color: white; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="card">
+        <h1>Metrou App 🚇</h1>
+        <p>مرحباً بك في تطبيق مترو لتعلم اللغات</p>
+        
+        <div id="server-status">
+            جاري الاتصال بالعقل... 🔄
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>اختبر قدرات الذكاء الاصطناعي</h3>
+        <button onclick="testAI()">شرح قاعدة (تجربة)</button>
+        <p id="ai-response" style="margin-top: 15px; color: #4fc3f7;"></p>
+    </div>
+</div>
+
+<script>
+    // رابط السيرفر الخاص بك
+    const BACKEND_URL = "https://metrou-db.onrender.com";
+
+    // دالة لفحص الاتصال فور فتح التطبيق
+    async function checkServer() {
+        const statusDiv = document.getElementById('server-status');
+        try {
+            const response = await fetch(`${BACKEND_URL}/api/health`);
+            const data = await response.json();
+            
+            if (data.status === "ok") {
+                statusDiv.innerHTML = '<span class="badge online">السيرفر متصل ✅</span>';
+            }
+        } catch (error) {
+            statusDiv.innerHTML = '<span class="badge offline">فشل الاتصال ❌</span><br><small>تأكد أن السيرفر يعمل</small>';
+            console.error(error);
+        }
+    }
+
+    // دالة لتجربة الزر
+    async function testAI() {
+        const resultDiv = document.getElementById('ai-response');
+        resultDiv.innerText = "جاري التفكير... 🤔";
+        
+        try {
+            const response = await fetch(`${BACKEND_URL}/api/ai/explain`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ topic: "Le Present", user_language: "ar" })
+            });
+            const data = await response.json();
+            resultDiv.innerText = data.explanation;
+        } catch (error) {
+            resultDiv.innerText = "حدث خطأ في الاتصال!";
+        }
+    }
+
+    // تشغيل الفحص عند الفتح
+    checkServer();
+</script>
+
+</body>
+</html>
