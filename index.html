@@ -3,246 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Metrou: رحلة تعلم الفرنسية 🚇</title>
+    <title>Metrou App | رحلة التعلم</title>
     <style>
-        body { background: #121212; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; padding: 20px; }
-        .station-container { display: flex; justify-content: center; gap: 20px; margin: 30px 0; flex-wrap: wrap; }
-        .station-node { 
-            background: #1e1e1e; border: 3px solid #4CAF50; border-radius: 50%; 
-            width: 80px; height: 80px; display: flex; flex-direction: column; 
-            align-items: center; justify-content: center; cursor: pointer; transition: 0.3s;
-        }
-        .station-node.locked { border-color: #555; opacity: 0.6; cursor: not-allowed; }
-        .station-node:hover:not(.locked) { transform: scale(1.1); background: #2e7d32; }
-        .lesson-card { background: #1e1e1e; padding: 20px; border-radius: 15px; max-width: 600px; margin: 20px auto; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
-        .btn-explain { background: #4CAF50; color: white; border: none; padding: 12px 25px; border-radius: 25px; cursor: pointer; font-size: 18px; font-weight: bold; }
-        #explanation-text { text-align: right; line-height: 1.6; color: #ddd; margin-top: 20px; white-space: pre-line; }
+        :root { --primary: #2e7d32; --bg: #121212; --card: #1e1e1e; --text: #ffffff; }
+        body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; }
+        .header { background: linear-gradient(135deg, #1a237e, #4a148c); padding: 30px 20px; border-bottom-left-radius: 30px; border-bottom-right-radius: 30px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: -25px; padding: 0 20px; }
+        .stat-card { background: var(--card); padding: 15px; border-radius: 20px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        .main-container { padding: 20px; }
+        .ai-section { background: var(--card); border-radius: 25px; padding: 20px; margin-top: 20px; border: 1px solid #333; }
+        .btn-ai { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 15px; width: 100%; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .station-line { height: 5px; background: #333; margin: 40px 0; position: relative; }
+        .station-dot { width: 40px; height: 40px; background: var(--primary); border-radius: 50%; position: absolute; top: -17px; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+        #inspector-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; z-index: 1000; flex-direction: column; align-items: center; justify-content: center; }
     </style>
 </head>
 <body>
 
-    <h1>تطبيق Metrou 🚇</h1>
-    <p>اضغط على المحطة لتبدأ درس اللغة الفرنسية</p>
+    <div class="header">
+        <h2>مرحباً، مترو! 👋</h2>
+        <p>دعنا نواصل رحلة الفرنسية اليوم</p>
+    </div>
 
-    <div class="station-container" id="metro-map">
+    <div class="stats-grid">
+        <div class="stat-card">⚡ <span>5</span><br><small>طاقة</small></div>
+        <div class="stat-card">⭐ <span>120</span><br><small>نقاط</small></div>
+        <div class="stat-card">🔥 <span>3</span><br><small>أيام</small></div>
+    </div>
 
-    <div id="inspector-section" class="lesson-card" style="border: 2px dashed #f44336; display: none;">
-    <div style="font-size: 50px;">👮‍♂️</div>
-    <h3 style="color: #f44336;">تفتيش مفاجئ! (Contrôle)</h3>
-    <p id="inspection-question">أظهر تذكرتك اللغوية.. أجب على السؤال التالي:</p>
-    <div id="inspection-content" style="background: #2a2a2a; padding: 15px; border-radius: 10px; margin-bottom: 10px;"></div>
-    <button class="btn-explain" style="background: #f44336;" onclick="closeInspection()">تمت الإجابة (أو قبول العقاب 😅)</button>
-</div>
-
-<script>
-    // وظيفة تشغيل التفتيش عشوائياً
-    async function startInspection() {
-        const inspectorDiv = document.getElementById('inspector-section');
-        const contentDiv = document.getElementById('inspection-content');
-        
-        inspectorDiv.style.display = 'block';
-        contentDiv.innerText = "جاري استدعاء المفتش... 🏃‍♂️";
-
-        try {
-            const res = await fetch(`${API_URL}/api/ai/inspect`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ past_topics: ["التحيات", "الأرقام", "أدوات التعريف"] })
-            });
-            const data = await res.json();
-            contentDiv.innerText = data.inspection_query;
-        } catch (e) {
-            contentDiv.innerText = "هناك زحام في المحطة، المفتش لن يأتي الآن!";
-        }
-    }
-
-    function closeInspection() {
-        document.getElementById('inspector-section').style.display = 'none';
-    }
-
-    // جعل التفتيش يظهر فجأة كل فترة
-    setTimeout(startInspection, 15000); // سيظهر التفتيش بعد 15 ثانية من فتح الصفحة كمثال
-</script>
-
+    <div class="main-container">
+        <div class="ai-section">
+            <button class="btn-ai" onclick="askAI()">
+                <span>✨</span> ask AI
+            </button>
+            <div id="ai-response" style="margin-top: 15px; font-size: 14px; color: #bbb; line-height: 1.6;"></div>
         </div>
 
-    <div class="lesson-card">
-        <h3 id="current-lesson">المحطة الحالية: الترحيب بالفرنسية</h3>
-        <button class="btn-explain" onclick="askGemini()">طلب شرح من Gemini ✨</button>
-        <div id="explanation-text">اضغط على الزر ليقوم الذكاء الاصطناعي بشرح القاعدة لك...</div>
+        <div class="station-line">
+            <div class="station-dot" style="right: 10%;">A1</div>
+            <div class="station-dot" style="right: 50%; background: #555;">A2</div>
+            <div class="station-dot" style="right: 90%; background: #555;">B1</div>
+        </div>
+    </div>
+
+    <div id="inspector-overlay">
+        <h1 style="font-size: 80px;">👮‍♂️</h1>
+        <h2 style="color: #f44336;">تفتيش مفاجئ!</h2>
+        <p id="punishment-text" style="padding: 20px; text-align: center;"></p>
+        <button onclick="closeInspector()" style="background: white; color: black; padding: 10px 30px; border-radius: 20px; border: none;">سأفعل ذلك! 😅</button>
     </div>
 
     <script>
         const API_URL = "https://metrou-db.onrender.com";
 
-        // تحميل خريطة المحطات من كود البايثون
-        async function loadMap() {
-            try {
-                const res = await fetch(`${API_URL}/api/metro/map`);
-                const stations = await res.json();
-                const mapDiv = document.getElementById('metro-map');
-                mapDiv.innerHTML = stations.map(s => `
-                    <div class="station-node ${s.status === 'locked' ? 'locked' : ''}" onclick="selectStation('${s.name_ar}', '${s.name_fr}')">
-                        <span style="font-size: 20px;">${s.status === 'locked' ? '🔒' : '🚇'}</span>
-                        <small style="font-size: 10px;">${s.name_ar}</small>
-                    </div>
-                `).join('');
-            } catch (e) { console.error("خطأ في جلب الخريطة"); }
-        }
-
-        let currentTopic = "التحيات في اللغة الفرنسية";
-
-        function selectStation(nameAr, nameFr) {
-            document.getElementById('current-lesson').innerText = `المحطة الحالية: ${nameAr} (${nameFr})`;
-            currentTopic = `${nameAr} في الفرنسية`;
-            document.getElementById('explanation-text').innerText = "جاهز للشرح...";
-        }
-
-        // إرسال الطلب لـ Gemini (الذي ربطناه في ملف server.py)
-        async function askGemini() {
-            const textDiv = document.getElementById('explanation-text');
-            textDiv.innerText = "جاري استشارة المعلم الذكي (Gemini)... 🧠";
-            
+        async function askAI() {
+            const respDiv = document.getElementById('ai-response');
+            respDiv.innerText = "جاري الاتصال بـ Gemini...";
             try {
                 const res = await fetch(`${API_URL}/api/ai/explain`, {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ topic: currentTopic })
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({ topic: "الماضي في الفرنسية" })
                 });
                 const data = await res.json();
-                textDiv.innerText = data.explanation;
-            } catch (err) {
-                textDiv.innerText = "تعذر الاتصال بالذكاء الاصطناعي. تأكد من إعداد مفتاح Gemini في Render.";
-            }
+                respDiv.innerText = data.explanation;
+            } catch (e) { respDiv.innerText = "خطأ في الاتصال بالسيرفر"; }
         }
 
-        loadMap();
+        function showInspector() {
+            const overlay = document.getElementById('inspector-overlay');
+            const pText = document.getElementById('punishment-text');
+            overlay.style.display = 'flex';
+            pText.innerText = "لقد تم ضبطك بدون تذكرة لغوية! عقابك: قف على قدم واحدة وانطق 'Bonjour' بصوت عالٍ 5 مرات!";
+        }
+
+        function closeInspector() { document.getElementById('inspector-overlay').style.display = 'none'; }
+        
+        // تفتيش مفاجئ بعد 10 ثوانٍ
+        setTimeout(showInspector, 10000);
     </script>
 </body>
 </html>
-            border-radius: 25px;
-            margin-top: 20px;
-            width: 100%;
-            cursor: pointer;
-        }
-        .status {
-            margin-top: 10px;
-            font-size: 0.9em;
-            color: #888;
-        }
-        .badge {
-            display: inline-block;
-            padding: 5px 10px;
-            border-radius: 10px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-        .online { background-color: #2e7d32; color: white; }
-        .offline { background-color: #c62828; color: white; }
-    </style>
-</head>
-<body>
-
-<div class="container">
-    <div class="card">
-        <h1>Metrou App 🚇</h1>
-        <p>مرحباً بك في تطبيق مترو لتعلم اللغات</p>
-        
-        <div id="server-status">
-            جاري الاتصال بالعقل... 🔄
-        </div>
-    </div>
-
-    <div class="card">
-        <h3>اختبر قدرات الذكاء الاصطناعي</h3>
-        <button onclick="testAI()">شرح قاعدة (تجربة)</button>
-        <p id="ai-response" style="margin-top: 15px; color: #4fc3f7;"></p>
-    </div>
-</div>
-
-<script>
-    // رابط السيرفر الخاص بك
-    const BACKEND_URL = "https://metrou-db.onrender.com";
-
-    // دالة لفحص الاتصال فور فتح التطبيق
-    async function checkServer() {
-        const statusDiv = document.getElementById('server-status');
-        try {
-            const response = await fetch(`${BACKEND_URL}/api/health`);
-            const data = await response.json();
-            
-            if (data.status === "ok") {
-                statusDiv.innerHTML = '<span class="badge online">السيرفر متصل ✅</span>';
-            }
-        } catch (error) {
-            statusDiv.innerHTML = '<span class="badge offline">فشل الاتصال ❌</span><br><small>تأكد أن السيرفر يعمل</small>';
-            console.error(error);
-        }
-    }
-
-    // دالة لتجربة الزر
-    async function testAI() {
-        const resultDiv = document.getElementById('ai-response');
-        resultDiv.innerText = "جاري التفكير... 🤔";
-        
-        try {
-            const response = await fetch(`${BACKEND_URL}/api/ai/explain`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ topic: "Le Present", user_language: "ar" })
-            });
-            const data = await response.json();
-            resultDiv.innerText = data.explanation;
-        } catch (error) {
-            resultDiv.innerText = "حدث خطأ في الاتصال!";
-        }
-    }
-
-    // تشغيل الفحص عند الفتح
-    checkServer();
-</script>
-
-</body>
-</html>
-<div class="lesson-card" style="border-bottom: 2px solid #4CAF50; margin-bottom: 30px;">
-    <h3>👤 الملف الشخصي</h3>
-    <input type="text" id="username-input" placeholder="اكتب اسمك هنا..." 
-           style="padding: 10px; border-radius: 5px; border: none; width: 60%;">
-    <button onclick="changeName()" 
-            style="padding: 10px; background: #2196F3; color: white; border: none; border-radius: 5px; cursor: pointer;">
-        حفظ الاسم
-    </button>
-    <p id="welcome-msg" style="color: #4CAF50; font-weight: bold; margin-top: 10px;"></p>
-</div>
-
-<script>
-    // وظيفة تغيير الاسم والاتصال بالسيرفر
-    async function changeName() {
-        const name = document.getElementById('username-input').value;
-        if (!name) return alert("يرجى كتابة اسم أولاً");
-
-        try {
-            const res = await fetch(`${API_URL}/api/user/update-name`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name: name })
-            });
-            const data = await res.json();
-            document.getElementById('welcome-msg').innerText = data.message;
-            // حفظ الاسم في المتصفح ليبقى موجوداً عند تحديث الصفحة
-            localStorage.setItem('user_name', name);
-        } catch (e) {
-            alert("خطأ في الاتصال بالسيرفر");
-        }
-    }
-
-    // استعادة الاسم المحفوظ عند فتح التطبيق
-    window.onload = () => {
-        const savedName = localStorage.getItem('user_name');
-        if (savedName) {
-            document.getElementById('welcome-msg').innerText = `أهلاً بك مجدداً، ${savedName} 🚇`;
-        }
-        loadMap(); // تشغيل الخريطة
-    };
-</script>
-
