@@ -161,3 +161,32 @@ async def request_passage(data: Dict[str, str]):
         return {"inspection_question": response.text}
     except:
         return {"inspection_question": "أين تذكرتك؟ قل 'Bonjour' لتمر!"}
+        @app.on_event("startup")
+async def startup_event():
+    # التحقق من وجود بيانات، وإذا لم توجد نقوم بإضافتها
+    count = await db["lessons"].count_documents({})
+    if count == 0:
+        sample_lessons = [
+            {
+                "id": "L1",
+                "level": 1,
+                "title": "الترحيب والتعارف",
+                "content": "تعلم كيف تقول مرحباً بالفرنسية: Bonjour",
+                "order": 1
+            },
+            {
+                "id": "L2",
+                "level": 1,
+                "title": "الأرقام من 1 إلى 10",
+                "content": "Un, Deux, Trois...",
+                "order": 2
+            }
+        ]
+        await db["lessons"].insert_many(sample_lessons)
+        
+        sample_words = [
+            {"french": "Bonjour", "arabic": "صباح الخير / مرحباً", "level": 1},
+            {"french": "Merci", "arabic": "شكراً", "level": 1}
+        ]
+        await db["vocabulary"].insert_many(sample_words)
+        print("تم حقن البيانات الأولية بنجاح! ✅")
