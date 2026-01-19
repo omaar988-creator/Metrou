@@ -29,3 +29,32 @@
     <div class="station-node locked" onclick="goToNextStation('الأفعال')">🔒</div>
     <div class="station-node locked" onclick="goToNextStation('القواعد')">🔒</div>
 </div>
+// في ملف index.html - جزء الـ Script
+
+let lastStation = "الترحيب";
+
+async function goToNextStation(targetStation) {
+    // إظهار شاشة المفتش كأنه "كمين" بين المحطتين
+    const overlay = document.getElementById('inspector-overlay');
+    const pText = document.getElementById('punishment-text');
+    
+    overlay.style.display = 'flex';
+    pText.innerText = "👮‍♂️: توقف! تفتيش مفاجئ لمراجعة درس " + lastStation + "... جاري تحضير السؤال...";
+
+    try {
+        const res = await fetch(`${API_URL}/api/metro/request-passage`, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ from_station: lastStation })
+        });
+        const data = await res.json();
+        
+        // عرض سؤال المفتش (مراجعة غير متوقعة)
+        pText.innerText = data.inspection_question;
+        
+        // إذا نجح (سنفترض النجاح الآن للتبسيط)
+        lastStation = targetStation; 
+    } catch (e) {
+        pText.innerText = "المفتش سمح لك بالمرور هذه المرة مجاناً! 🏃‍♂️";
+    }
+}
