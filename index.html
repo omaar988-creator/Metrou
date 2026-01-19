@@ -3,80 +3,90 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Metrou App</title>
+    <title>Metrou App 🚇</title>
     <style>
-        body { background: #131f24; color: white; font-family: sans-serif; text-align: center; margin: 0; }
-        .header { padding: 20px; background: #202f36; font-weight: bold; }
-        .stats { display: flex; justify-content: space-around; padding: 15px; background: #131f24; border-bottom: 1px solid #333; }
-        .track { display: flex; flex-direction: column; align-items: center; gap: 40px; padding: 40px 0; position: relative; }
-        .track::before { content: ''; position: absolute; width: 4px; height: 100%; background: #3b4c54; z-index: 0; }
-        .node { width: 60px; height: 60px; background: white; border-radius: 50%; border: 4px solid #58cc02; display: flex; align-items: center; justify-content: center; color: black; font-weight: bold; cursor: pointer; z-index: 1; transition: 0.2s; }
-        .node:active { transform: scale(0.9); }
-        .locked { border-color: #3b4c54; background: #202f36; color: #3b4c54; }
+        :root { --main-bg: #131f24; --accent: #58cc02; --wrong: #ff4b4b; }
+        body { background: var(--main-bg); color: white; font-family: sans-serif; text-align: center; margin: 0; padding-bottom: 50px; }
+        .header { padding: 20px; background: #202f36; font-size: 1.5rem; font-weight: bold; border-bottom: 2px solid var(--accent); }
+        .stats { display: flex; justify-content: space-around; padding: 15px; background: #131f24; position: sticky; top: 0; z-index: 100; }
+        .track { display: flex; flex-direction: column; align-items: center; gap: 40px; padding: 40px 0; }
+        .node { width: 70px; height: 70px; background: white; border-radius: 50%; border: 5px solid var(--accent); display: flex; align-items: center; justify-content: center; color: black; font-weight: bold; font-size: 1.2rem; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 15px rgba(88, 204, 2, 0.4); }
+        .node.locked { border-color: #3b4c54; background: #202f36; color: #3b4c54; box-shadow: none; }
+        
         /* شاشة المفتش */
-        #inspector { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
-        .btn { background: #58cc02; color: white; border: none; padding: 12px 30px; border-radius: 20px; font-size: 18px; cursor: pointer; margin-top: 15px; }
+        #inspector { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
+        .btn { background: var(--accent); color: white; border: none; padding: 15px 40px; border-radius: 30px; font-size: 1.1rem; margin-top: 20px; width: 80%; }
+        .punishment { color: var(--wrong); margin-top: 15px; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <div class="header">Metrou: رحلة المترو 🚇</div>
+    <div class="header">مترو: رحلة اللغة 🚇</div>
     
     <div class="stats">
         <div style="color: #ffc800;">⭐ <span id="pts">0</span></div>
-        <div style="color: #ff4b4b;">⚡ <span id="nrg">5</span></div>
+        <div style="color: var(--wrong);">⚡ <span id="nrg">5</span></div>
     </div>
 
-    <div class="track">
-        <div class="node" onclick="alert('المحطة 1: الترحيب بالفرنسية')">1</div>
-        <div class="node locked" onclick="showInspector('الأفعال')">🔒</div>
-        <div class="node locked" onclick="showInspector('القواعد')">🔒</div>
+    <div class="track" id="nodes-container">
+        <div class="node" onclick="openLesson('الترحيب')">1</div>
+        <div class="node locked" onclick="triggerInspector('الأفعال')">2</div>
+        <div class="node locked" onclick="triggerInspector('الأرقام')">3</div>
     </div>
 
     <div id="inspector">
-        <div style="font-size: 70px;">👮‍♂️</div>
-        <h2 style="color: #ff4b4b;">تفتيش مفاجئ!</h2>
-        <p id="q-text" style="padding: 20px; font-size: 18px;">جاري تحميل سؤال المراجعة من Gemini...</p>
+        <div style="font-size: 80px;">👮‍♂️</div>
+        <h2 style="color: var(--wrong);">تفتيش مفاجئ!</h2>
+        <p id="q-text" style="font-size: 1.2rem;">جاري تحميل سؤال المفتش...</p>
         <button class="btn" onclick="resolve(true)">أعرف الإجابة ✅</button>
         <button class="btn" style="background: #3b4c54;" onclick="resolve(false)">لا أعرف (خصم طاقة)</button>
+        <p id="punish-msg" class="punishment"></p>
     </div>
 
     <script>
-        // تأكد من أن الرابط هو رابط السيرفر الخاص بك في Render
         const API_URL = "https://metrou-db.onrender.com";
         let energy = 5;
         let points = 0;
 
-        function showInspector(topic) {
-            if (energy <= 0) return alert("نفدت طاقتك!");
+        function openLesson(name) {
+            alert("بدء درس: " + name);
+        }
+
+        async function triggerInspector(topic) {
+            if (energy <= 0) return alert("نفدت طاقتك! انتظر حتى تشحن.");
             document.getElementById('inspector').style.display = 'flex';
             
-            // محاولة جلب سؤال من السيرفر
-            fetch(`${API_URL}/api/ai/explain`, {
-                method: "POST",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({ topic: `سؤال مراجعة عن ${topic}` })
-            })
-            .then(res => res.json())
-            .then(data => {
-                document.getElementById('q-text').innerText = data.explanation;
-            })
-            .catch(err => {
-                document.getElementById('q-text').innerText = "المفتش: ترجم 'Bonjour' للمرور!";
-            });
+            try {
+                const res = await fetch(`${API_URL}/api/ai/inspect`, {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({ topic: topic })
+                });
+                const data = await res.json();
+                document.getElementById('q-text').innerText = data.question;
+            } catch (e) {
+                document.getElementById('q-text').innerText = "المفتش: ترجم كلمة 'Bonjour' فوراً!";
+            }
         }
 
         function resolve(success) {
+            const punishMsg = document.getElementById('punish-msg');
             if (success) {
-                points += 10;
+                points += 15;
                 document.getElementById('pts').innerText = points;
-                alert("مررت بسلام! كسبت 10 نقاط.");
+                punishMsg.style.color = "#58cc02";
+                punishMsg.innerText = "أحسنت! المفتش سمح لك بالمرور. 🎫";
             } else {
                 energy--;
                 document.getElementById('nrg').innerText = energy;
-                alert("تم خصم طاقة واحدة.");
+                const punishments = ["عقابك: قف على رجل واحدة! 🦵", "عقابك: المس أنفك بلسانك! 👅"];
+                punishMsg.innerText = punishments[Math.floor(Math.random()*punishments.length)];
             }
-            document.getElementById('inspector').style.display = 'none';
+
+            setTimeout(() => {
+                document.getElementById('inspector').style.display = 'none';
+                punishMsg.innerText = "";
+            }, 3000);
         }
     </script>
 </body>
