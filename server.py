@@ -25,6 +25,23 @@
 <body>
 
     <h2>مرحباً، Omer! 👋</h2>
+    # إضافة متغيرات الحالة (في الإنتاج يفضل ربطها بـ MongoDB)
+user_stats = {
+    "energy": 5,
+    "points": 0,
+    "last_check": None
+}
+
+@api_router.get("/user/stats")
+async def get_stats():
+    return user_stats
+
+@api_router.post("/ai/inspect/fail")
+async def handle_fail():
+    if user_stats["energy"] > 0:
+        user_stats["energy"] -= 1
+    return {"message": "خصم طاقة!", "current_energy": user_stats["energy"]}
+
     
     <div class="stats-container">
         <div class="stat-box">⚡<br>5<br><small>طاقة</small></div>
