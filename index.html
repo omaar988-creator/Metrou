@@ -1,60 +1,86 @@
-<style>
-    /* شكل السكة الحديدية */
-    .track {
-        height: 10px;
-        background: repeating-linear-gradient(90deg, #555 0, #555 10px, #222 10px, #222 20px);
-        margin: 50px 0;
-        position: relative;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    .station-node {
-        width: 50px;
-        height: 50px;
-        background: #1e1e1e;
-        border: 4px solid #4CAF50;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        z-index: 2;
-    }
-    .station-node.locked { border-color: #555; background: #121212; }
-</style>
-
-<div class="track">
-    <div class="station-node" onclick="alert('أنت هنا!')">🚇</div>
-    <div class="station-node locked" onclick="goToNextStation('الأفعال')">🔒</div>
-    <div class="station-node locked" onclick="goToNextStation('القواعد')">🔒</div>
-</div>
-// في ملف index.html - جزء الـ Script
-
-let lastStation = "الترحيب";
-
-async function goToNextStation(targetStation) {
-    // إظهار شاشة المفتش كأنه "كمين" بين المحطتين
-    const overlay = document.getElementById('inspector-overlay');
-    const pText = document.getElementById('punishment-text');
-    
-    overlay.style.display = 'flex';
-    pText.innerText = "👮‍♂️: توقف! تفتيش مفاجئ لمراجعة درس " + lastStation + "... جاري تحضير السؤال...";
-
-    try {
-        const res = await fetch(`${API_URL}/api/metro/request-passage`, {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({ from_station: lastStation })
-        });
-        const data = await res.json();
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Metrou App | تعلم الفرنسية</title>
+    <style>
+        :root { --primary: #58cc02; --bg: #131f24; --text: #ffffff; }
+        body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; }
+        .header { background: #202f36; padding: 20px; border-bottom: 2px solid #3b4c54; text-align: center; }
+        .stats-bar { display: flex; justify-content: space-around; padding: 10px; background: #131f24; position: sticky; top: 0; }
+        .stat-item { font-weight: bold; font-size: 18px; }
+        .energy { color: #ff4b4b; } .stars { color: #ffc800; }
         
-        // عرض سؤال المفتش (مراجعة غير متوقعة)
-        pText.innerText = data.inspection_question;
-        
-        // إذا نجح (سنفترض النجاح الآن للتبسيط)
-        lastStation = targetStation; 
-    } catch (e) {
-        pText.innerText = "المفتش سمح لك بالمرور هذه المرة مجاناً! 🏃‍♂️";
-    }
-}
+        /* خريطة المترو (على شكل Subway Surfers) */
+        .track-container { padding: 40px 0; display: flex; flex-direction: column; align-items: center; gap: 60px; }
+        .rail { width: 10px; background: #3b4c54; position: absolute; height: 100%; z-index: -1; }
+        .station { width: 70px; height: 70px; background: white; border: 5px solid var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: black; font-weight: bold; position: relative; }
+        .station.locked { border-color: #3b4c54; background: #202f36; color: #3b4c54; }
+
+        /* شاشة المفتش السوداء */
+        #inspector-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.98); display: none; z-index: 1000; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; }
+        .inspector-btn { background: var(--primary); color: white; border: none; padding: 15px 30px; border-radius: 15px; font-size: 18px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+    <div class="header"><h2>مرحباً، Omer! 🚇</h2></div>
+
+    <div class="stats-bar">
+        <div class="stat-item energy">⚡ <span id="energy-val">5</span></div>
+        <div class="stat-item stars">⭐ <span id="points-val">0</span></div>
+    </div>
+
+    <div class="track-container" style="position: relative;">
+        <div class="rail"></div>
+        <div class="station" onclick="alert('المستوى الأول: الترحيب')">1</div>
+        <div class="station locked" onclick="triggerInspector('الأفعال')">🔒</div>
+        <div class="station locked" onclick="triggerInspector('القواعد')">🔒</div>
+    </div>
+
+    <div id="inspector-overlay">
+        <h1 style="font-size: 100px;">👮‍♂️</h1>
+        <h2 style="color: #ff4b4b;">تفتيش مفاجئ!</h2>
+        <p id="inspection-q" style="font-size: 20px;">أظهر تذكرتك اللغوية قبل المرور للمحطة التالية...</p>
+        <button class="inspector-btn" onclick="checkAnswer()">تقديم التذكرة (إجابة)</button>
+        <button class="inspector-btn" style="background: #3b4c54;" onclick="closeInspector()">هروب (خصم 1 طاقة ⚡)</button>
+    </div>
+
+    <script>
+        const API_URL = "https://metrou-db.onrender.com";
+        let energy = 5;
+        let points = 0;
+
+        async function triggerInspector(topic) {
+            if(energy <= 0) return alert("طاقتك نفدت! انتظر شحن المترو.");
+            const overlay = document.getElementById('inspector-overlay');
+            const qText = document.getElementById('inspection-q');
+            overlay.style.display = 'flex';
+            
+            try {
+                const res = await fetch(`${API_URL}/api/ai/explain`, {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({ topic: `سؤال مراجعة عن ${topic} بالفرنسية` })
+                });
+                const data = await res.json();
+                qText.innerText = data.explanation;
+            } catch(e) { qText.innerText = "المفتش يطلب منك نطق Bonjour للمرور!"; }
+        }
+
+        function closeInspector() {
+            energy--;
+            document.getElementById('energy-val').innerText = energy;
+            document.getElementById('inspector-overlay').style.display = 'none';
+        }
+
+        function checkAnswer() {
+            points += 10;
+            document.getElementById('points-val').innerText = points;
+            document.getElementById('inspector-overlay').style.display = 'none';
+            alert("أحسنت! المفتش سمح لك بالمرور للمحطة التالية.");
+        }
+    </script>
+</body>
+</html>
